@@ -1,4 +1,3 @@
-//TODO idには選択してる要素を絞る意味しかないから削除できる気がする
 class editorManager {
 	constructor() {
 		this.setInitConfig();
@@ -14,7 +13,7 @@ class editorManager {
 		this.ui_elements = [];
 		this.dragOffset = { x: undefined, y: undefined };
 		this.dragElement = undefined;
-		this.selected_element_id = undefined;
+		this.selected_element_index = undefined;
 
 		this.toolbar_mode = "select";
 
@@ -160,7 +159,7 @@ class editorManager {
 		controlpanel_div.appendChild(controlpanel_title_h2);
 
 		//コントロールパネルの中身
-		const selected_element_data = this.ui_elements.filter((x) => x.id === this.selected_element_id)[0];
+		const selected_element_data = this.ui_elements[this.selected_element_index];
 		if (selected_element_data) {
 			const controlpanel_input_div = document.createElement("div");
 
@@ -169,7 +168,6 @@ class editorManager {
 			<button id="controlpanel_delete_button">削除</button>
 			<button id="controlpanel_copy_button">コピー</button>
 			<p>index: ${element_data_index}</p>
-			<p>id: <input type="text" value=${selected_element_data.id} id="id"></p>
 			<p>size_w: <input type="text" value=${selected_element_data.w} id="size_w"></p>
 			<p>size_h: <input type="text" value=${selected_element_data.h} id="size_h"></p>
 			<p>offset_x: <input type="text" value=${selected_element_data.x} id="offset_x"></p>
@@ -188,9 +186,11 @@ class editorManager {
 			};
 			controlpanel_input_div.querySelector("#controlpanel_update_button").onclick = (ev) => {
 				this.updateElement(ev);
+				this.render();
 			};
 			controlpanel_input_div.querySelector("#controlpanel_copy_button").onclick = (ev) => {
 				this.copyElement(ev);
+				this.render();
 			};
 			controlpanel_div.appendChild(controlpanel_input_div);
 		} else {
@@ -225,7 +225,7 @@ class editorManager {
 		//0番パディング追加
 		const padding_div = document.createElement("div");
 		padding_div.classList.add("elementlist_padding");
-		padding_div.setAttribute("name", 0);
+		padding_div.setAttribute("padding_index", 0);
 		padding_div.style.position = "absolute";
 		padding_div.style.top = elementlist_offset_y + "px";
 		padding_div.style.left = elementlist_offset_x + 30 - 10 + "px";
@@ -248,9 +248,9 @@ class editorManager {
 			element_div.style.height = 80 - 2 + "px";
 			element_div.style.border = "1px solid";
 			element_div.style.zIndex = 10;
-			element_div.setAttribute("name", element_data.id);
+			element_div.setAttribute("index", this.getElementIndexFromId(element_data.id));
 			element_div.classList.add("elementlist");
-			if (element_data.id === this.selected_element_id) element_div.style.borderColor = "red";
+			if (this.getElementIndexFromId(element_data.id) === this.selected_element_index) element_div.style.borderColor = "red";
 			const innerHTML_list = [];
 			if (element_data.is_show_image)
 				innerHTML_list.push(`<img style="pointer-events: none;height: 100%;width: 100%;position: absolute;" src="./${element_data.image}">`);
@@ -266,7 +266,7 @@ class editorManager {
 			//パディング
 			const padding_div = document.createElement("div");
 			padding_div.classList.add("elementlist_padding");
-			padding_div.setAttribute("name", index + 1);
+			padding_div.setAttribute("padding_index", index + 1);
 			padding_div.style.position = "absolute";
 			padding_div.style.top = grid_index_y * 80 + elementlist_offset_y + "px";
 			padding_div.style.left = (grid_index_x + 1) * 90 + elementlist_offset_x + 30 - 10 + "px";
@@ -286,9 +286,9 @@ class editorManager {
 			element_div.style.width = element_data.w * screen_scale - 2 + "px";
 			element_div.style.height = element_data.h * screen_scale - 2 + "px";
 			element_div.style.border = "1px solid";
-			element_div.setAttribute("name", element_data.id);
+			element_div.setAttribute("index", this.getElementIndexFromId(element_data.id));
 			element_div.classList.add("ui_element");
-			if (element_data.id === this.selected_element_id) element_div.style.borderColor = "red";
+			if (this.getElementIndexFromId(element_data.id) === this.selected_element_index) element_div.style.borderColor = "red";
 			const innerHTML_list = [];
 
 			if (element_data.is_show_image)
@@ -389,7 +389,7 @@ class editorManager {
 			let data3_temp = [`${w}`, `${h}`, `${x - count}`, `${y - 1}`];
 			let data3 = data2sendText_inside(...data3_temp);
 			let send_text = data2sendText(data1, data2, data3);
-			output_obj.push({ text: send_text, image, id });
+			output_obj.push({ text: send_text, image });
 		}
 		return output_obj;
 	}
@@ -398,20 +398,16 @@ class editorManager {
 		//text => this.ui_element
 		try {
 			const raw_obj = JSON.parse(text);
-			const need_keys = ["text", "image", "id"].sort((a, b) => a - b).join("");
+			const need_keys = ["text", "image"];
 			const return_obj = [];
 			//keyチェック
 			for (let element_data of raw_obj) {
-				let is_has_need_keys = Boolean(
-					Object.keys(element_data)
-						.sort((a, b) => a - b)
-						.join("") === need_keys
-				);
-				if (!is_has_need_keys) throw new Error("keyが不足しています\n" + JSON.stringify(element_data));
-			}
-			//id被りチェック
-			for (let element_data of raw_obj) {
-				if (raw_obj.filter((x) => x.id === element_data.id).length !== 1) throw new Error("idが重複しています\nid:" + element_data.id);
+				let flag = 0;
+				for (let need_key of need_keys) {
+					if (Object.keys(element_data).includes(need_key)) flag += 1;
+				}
+				//key過多は無視する
+				if (need_keys.length > flag) throw new Error("keyが不足しています\n" + JSON.stringify(element_data));
 			}
 
 			//text解析
@@ -459,7 +455,10 @@ class editorManager {
 				const x = Number(cut(field3_field_string, field3_field_length, 3)) + count;
 				const y = Number(cut(field3_field_string, field3_field_length, 4)) + 1;
 
-				const id = element_data.id;
+				let id = new Date().getTime();
+				while (return_obj.filter((x) => x.id === id).length !== 0) {
+					id += 1;
+				}
 				const image = element_data.image;
 				return_obj.push({ id, text, image, x, y, w, h, is_show_text, is_show_image, is_show_button });
 			}
@@ -488,7 +487,6 @@ class editorManager {
 					this.screen_height_px = Math.floor(input.value);
 				}
 			}
-			this.render();
 			return;
 		}
 		const element_data = this.ui_elements[target.getAttribute("index")];
@@ -539,32 +537,27 @@ class editorManager {
 				if (input.checked === element_data.is_show_button) continue;
 				element_data.is_show_button = input.checked;
 			}
-			if (input.id === "id") {
-				if (input.value === element_data.id) continue;
-				if (input.value.length < 1) return window.alert("idの値が短すぎます");
-				if (input.value.match(/\W/)) return window.alert("idの値に使用できない文字が含まれています");
-				if (this.ui_elements.filter((x) => x.id === input.value).length !== 0) return window.alert("idの値は既に使用されています");
-				element_data.id = input.value;
-				this.selected_element_id = input.value;
-			}
 		}
 		this.render();
+	}
+
+	getElementIndexFromId(id) {
+		let element = this.ui_elements.filter((x) => x.id === id)[0];
+		if (!element) return undefined;
+		return this.ui_elements.indexOf(element);
 	}
 
 	copyElement(ev) {
-		const element_data = this.ui_elements.filter((x) => x.id === this.selected_element_id)[0];
+		const element_data = this.ui_elements[this.selected_element_index];
 		const element_data_copy = JSON.parse(JSON.stringify(element_data));
 		element_data_copy.id += "_2";
 		this.ui_elements.push(element_data_copy);
-		this.selected_element_id = element_data_copy.id;
-		this.render();
+		this.selected_element_index = this.ui_elements.length - 1;
 	}
 
 	addUIElement() {
-		let id = `element${this.ui_elements.length + 1}`;
-		while (this.ui_elements.filter((x) => x.id === id).length !== 0) {
-			id += `_${this.ui_elements.filter((x) => x.id === id).length + 1}`;
-		}
+		let id = `${new Date().getTime()}`;
+		let text = `element${this.ui_elements.length}`;
 		let element = {
 			id,
 			x: 0,
@@ -574,11 +567,11 @@ class editorManager {
 			is_show_button: false,
 			is_show_image: false,
 			is_show_text: true,
-			text: id,
+			text,
 			image: "",
 		};
-		this.selected_element_id = element.id;
 		this.ui_elements.push(element);
+		this.selected_element_index = this.ui_elements.length - 1;
 		this.render();
 	}
 
@@ -588,13 +581,13 @@ class editorManager {
 		const classList = [...target.classList.values()];
 
 		if (target.id === "screen" && this.toolbar_mode === "select") {
-			this.selected_element_id = undefined;
+			this.selected_element_index = undefined;
 			this.render();
 			return;
 		}
 		if (classList.includes("ui_element")) {
 			if (this.toolbar_mode === "move") {
-				const selected_element = document.querySelector("#screen").querySelector(`div.ui_element[name=${this.selected_element_id}`);
+				const selected_element = document.querySelector("#screen").querySelector(`div.ui_element[index="${this.selected_element_index}"]`);
 				if (!selected_element) return; //起きないはず
 				const offsetX = ev.pageX - selected_element.offsetLeft;
 				const offsetY = ev.pageY - selected_element.offsetTop;
@@ -604,17 +597,19 @@ class editorManager {
 				this.dragElement = selected_element;
 			}
 			if (this.toolbar_mode === "select") {
-				if (this.selected_element_id !== target.getAttribute("name")) this.selected_element_id = target.getAttribute("name");
-				else this.selected_element_id = undefined;
+				const target_element_index = this.getElementIndexFromId(target.getAttribute("index"));
+				if (this.selected_element_index !== target_element_index) this.selected_element_index = target_element_index;
+				else this.selected_element_index = undefined;
 				this.render();
 			}
 			return;
 		}
 		if (classList.includes("elementlist")) {
-			if (this.selected_element_id !== target.getAttribute("name")) {
+			const target_element_index = Number(target.getAttribute("index"));
+			if (this.selected_element_index !== target_element_index) {
 				//選択中のアイテムとそのエレメントが
 				//違うなら選択
-				this.selected_element_id = target.getAttribute("name");
+				this.selected_element_index = target_element_index;
 				this.render();
 			} else {
 				//一緒ならドラッグ
@@ -623,10 +618,9 @@ class editorManager {
 				this.dragOffset = { x: offsetX, y: offsetY };
 				this.dragElement = target;
 				//パディングを色づける
-				const selected_element_data = this.ui_elements.filter((x) => x.id === target.getAttribute("name"))[0];
-				let element_data_index = this.ui_elements.indexOf(selected_element_data);
+				let element_data_index = target.getAttribute("index");
 				document.querySelectorAll(".elementlist_padding").forEach((e) => {
-					const padding_index = Number(e.getAttribute("name"));
+					const padding_index = Number(e.getAttribute("padding_index"));
 					if (element_data_index === padding_index || element_data_index + 1 === padding_index) return;
 					e.classList.add("elementlist_dragging");
 				});
@@ -642,7 +636,7 @@ class editorManager {
 			const screen_offset_x = 1 + 5;
 			const screen_offset_y = this.toolbar_height_px + 1 * 2 + 5;
 			const screen_scale = (window.innerWidth * this.screen_width_percent) / 100 / this.screen_width_px;
-			let element_data = this.ui_elements.filter((x) => x.id === this.dragElement.getAttribute("name"))[0];
+			let element_data = this.ui_elements[Number(this.dragElement.getAttribute("index"))];
 			if (!element_data) return (this.dragElement = undefined);
 			this.ui_elements[this.ui_elements.indexOf(element_data)].x = (
 				(Number(this.dragElement.style.left.replace("px", "")) - screen_offset_x) /
@@ -664,8 +658,8 @@ class editorManager {
 				const elementY = Number(e.style.top.replace("px", ""));
 				if (mouseX < elementX || elementX + e.offsetWidth < mouseX) return;
 				if (mouseY < elementY || elementY + e.offsetHeight < mouseY) return;
-				const padding_index = Number(e.getAttribute("name"));
-				const selected_element_data = this.ui_elements.filter((x) => x.id === this.dragElement.getAttribute("name"))[0];
+				const padding_index = Number(e.getAttribute("padding_index"));
+				const selected_element_data = this.ui_elements[Number(this.dragElement.getAttribute("index"))];
 				const ui_element_index = this.ui_elements.indexOf(selected_element_data);
 				if (ui_element_index < padding_index) this.ui_elements = this.arrayMoveAt(this.ui_elements, ui_element_index, padding_index - 1);
 				else this.ui_elements = this.arrayMoveAt(this.ui_elements, ui_element_index, padding_index);

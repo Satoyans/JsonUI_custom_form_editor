@@ -1,0 +1,15 @@
+a {
+	user-select: none;
+}
+
+.elementlist_dragging {
+	background-color: rgba(255, 68, 55, 0.3);
+}
+
+div {
+	z-index: 1;
+}
+
+.ui_element img {
+	image-rendering: pixelated;
+}

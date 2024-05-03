@@ -1,4 +1,4 @@
-new editorManager();
+//TODO idには選択してる要素を絞る意味しかないから削除できる気がする
 class editorManager {
 	constructor() {
 		this.setInitConfig();
@@ -167,6 +167,7 @@ class editorManager {
 			let element_data_index = this.ui_elements.indexOf(selected_element_data);
 			controlpanel_input_div.innerHTML = `
 			<button id="controlpanel_delete_button">削除</button>
+			<button id="controlpanel_copy_button">コピー</button>
 			<p>index: ${element_data_index}</p>
 			<p>id: <input type="text" value=${selected_element_data.id} id="id"></p>
 			<p>size_w: <input type="text" value=${selected_element_data.w} id="size_w"></p>
@@ -187,6 +188,9 @@ class editorManager {
 			};
 			controlpanel_input_div.querySelector("#controlpanel_update_button").onclick = (ev) => {
 				this.updateElement(ev);
+			};
+			controlpanel_input_div.querySelector("#controlpanel_copy_button").onclick = (ev) => {
+				this.copyElement(ev);
 			};
 			controlpanel_div.appendChild(controlpanel_input_div);
 		} else {
@@ -546,6 +550,15 @@ class editorManager {
 		this.render();
 	}
 
+	copyElement(ev) {
+		const element_data = this.ui_elements.filter((x) => x.id === this.selected_element_id)[0];
+		const element_data_copy = JSON.parse(JSON.stringify(element_data));
+		element_data_copy.id += "_2";
+		this.ui_elements.push(element_data_copy);
+		this.selected_element_id = element_data_copy.id;
+		this.render();
+	}
+
 	addUIElement() {
 		let id = `element${this.ui_elements.length + 1}`;
 		while (this.ui_elements.filter((x) => x.id === id).length !== 0) {
@@ -717,3 +730,4 @@ class editorManager {
 		this.dragElement.style.left = x + "px";
 	}
 }
+new editorManager();

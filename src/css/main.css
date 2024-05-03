@@ -9,3 +9,7 @@ a {
 div {
 	z-index: 1;
 }
+
+.ui_element img {
+	image-rendering: pixelated;
+}

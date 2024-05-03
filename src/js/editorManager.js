@@ -22,8 +22,8 @@ class editorManager {
 		this.toolbar_color = "#cad2de";
 
 		this.screen_width_percent = 80; //windowに対しての値
-		this.screen_width_px = 400; //マイクラ内の値
-		this.screen_height_px = 200;
+		this.screen_width_px = 461; //デフォルトのマイクラ内の値
+		this.screen_height_px = 225;
 		this.screen_color = "#cccee0";
 
 		this.controlpanel_color = "#a5a8ad";
@@ -197,7 +197,8 @@ class editorManager {
 			const controlpanel_input_div = document.createElement("div");
 			controlpanel_input_div.innerHTML = `
 			<p>スクリーン</p>
-			<p>※サイズはエレメントに直書き</p>
+			<p>※サイズを変更する場合は'ui/server_form.json'を書き換え</p>
+			<p>("size": [475, 255]からタイトル分で[-14,0]され、上下10pxずつ減った?値になるみたいです。)</p>
 			<p>size_x<input type="text" value=${this.screen_width_px} id="size_x"></p>
 			<p>size_y<input type="text" value=${this.screen_height_px} id="size_y"></p>
 			<button id="controlpanel_update_button" index="screen">更新</button>

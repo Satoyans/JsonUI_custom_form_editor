@@ -172,7 +172,7 @@ class editorManager {
 			<p>size_h: <input type="text" value=${selected_element_data.h} id="size_h"></p>
 			<p>offset_x: <input type="text" value=${selected_element_data.x} id="offset_x"></p>
 			<p>offset_y: <input type="text" value=${selected_element_data.y} id="offset_y"></p>
-			<p>text: <input type="text" value=${selected_element_data.text} id="text"></p>
+			<p>text: <input type="text" value="${selected_element_data.text}" id="text"></p>
 			<p>image_path: <input type="text" value="${selected_element_data.image}" id="image_path"></p>
 			
 			<p>テキストを表示するか: <input type="checkbox" ${selected_element_data.is_show_text ? "checked" : ""} id="is_show_text" /></p>

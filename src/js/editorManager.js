@@ -1,3 +1,4 @@
+new editorManager();
 class editorManager {
 	constructor() {
 		this.setInitConfig();

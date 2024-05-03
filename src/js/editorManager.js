@@ -251,13 +251,13 @@ class editorManager {
 			element_div.classList.add("elementlist");
 			if (element_data.id === this.selected_element_id) element_div.style.borderColor = "red";
 			const innerHTML_list = [];
-			innerHTML_list.push(`<a style="margin:0;pointer-events: none;position: absolute;width: 100%;color:gray;">${index}</a>`);
 			if (element_data.is_show_image)
 				innerHTML_list.push(`<img style="pointer-events: none;height: 100%;width: 100%;position: absolute;" src="./${element_data.image}">`);
 			if (element_data.is_show_text)
 				innerHTML_list.push(
 					`<a style="text-align:center;line-height:80px;margin:0;pointer-events: none;position: absolute;width: 100%;">${element_data.text}</a>`
 				);
+			innerHTML_list.push(`<a style="margin:0;pointer-events: none;position: absolute;width: 100%;">${index}</a>`);
 			if (element_data.is_show_button) element_div.style.backgroundColor = "white";
 			element_div.innerHTML = [...innerHTML_list].join("");
 			elementlist_div.appendChild(element_div);

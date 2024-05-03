@@ -198,7 +198,7 @@ class editorManager {
 			controlpanel_input_div.innerHTML = `
 			<p>スクリーン</p>
 			<p>※サイズを変更する場合は'ui/server_form.json'を書き換え</p>
-			<p>("size": [475, 255]からタイトル分で[-14,0]され、上下10pxずつ減った?値になるみたいです。)</p>
+			<p>("size": [475, 255]からタイトル分で[-14,-10]され、上下10pxずつ減った?値になるみたいです。)</p>
 			<p>size_x<input type="text" value=${this.screen_width_px} id="size_x"></p>
 			<p>size_y<input type="text" value=${this.screen_height_px} id="size_y"></p>
 			<button id="controlpanel_update_button" index="screen">更新</button>

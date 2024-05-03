@@ -597,7 +597,7 @@ class editorManager {
 				this.dragElement = selected_element;
 			}
 			if (this.toolbar_mode === "select") {
-				const target_element_index = this.getElementIndexFromId(target.getAttribute("index"));
+				const target_element_index = Number(target.getAttribute("index"));
 				if (this.selected_element_index !== target_element_index) this.selected_element_index = target_element_index;
 				else this.selected_element_index = undefined;
 				this.render();

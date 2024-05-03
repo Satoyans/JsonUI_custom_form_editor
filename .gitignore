@@ -1,1 +1,2 @@
-textures/
+/textures/*
+!/textures/sample_image.png

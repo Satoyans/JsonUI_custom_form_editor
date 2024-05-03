@@ -1,3 +1,4 @@
+//TODO idには選択してる要素を絞る意味しかないから削除できる気がする
 class editorManager {
 	constructor() {
 		this.setInitConfig();
@@ -166,6 +167,7 @@ class editorManager {
 			let element_data_index = this.ui_elements.indexOf(selected_element_data);
 			controlpanel_input_div.innerHTML = `
 			<button id="controlpanel_delete_button">削除</button>
+			<button id="controlpanel_copy_button">コピー</button>
 			<p>index: ${element_data_index}</p>
 			<p>id: <input type="text" value=${selected_element_data.id} id="id"></p>
 			<p>size_w: <input type="text" value=${selected_element_data.w} id="size_w"></p>
@@ -186,6 +188,9 @@ class editorManager {
 			};
 			controlpanel_input_div.querySelector("#controlpanel_update_button").onclick = (ev) => {
 				this.updateElement(ev);
+			};
+			controlpanel_input_div.querySelector("#controlpanel_copy_button").onclick = (ev) => {
+				this.copyElement(ev);
 			};
 			controlpanel_div.appendChild(controlpanel_input_div);
 		} else {
@@ -246,13 +251,13 @@ class editorManager {
 			element_div.classList.add("elementlist");
 			if (element_data.id === this.selected_element_id) element_div.style.borderColor = "red";
 			const innerHTML_list = [];
-			innerHTML_list.push(`<a style="margin:0;pointer-events: none;position: absolute;width: 100%;color:gray;">${index}</a>`);
 			if (element_data.is_show_image)
 				innerHTML_list.push(`<img style="pointer-events: none;height: 100%;width: 100%;position: absolute;" src="./${element_data.image}">`);
 			if (element_data.is_show_text)
 				innerHTML_list.push(
 					`<a style="text-align:center;line-height:80px;margin:0;pointer-events: none;position: absolute;width: 100%;">${element_data.text}</a>`
 				);
+			innerHTML_list.push(`<a style="margin:0;pointer-events: none;position: absolute;width: 100%;">${index}</a>`);
 			if (element_data.is_show_button) element_div.style.backgroundColor = "white";
 			element_div.innerHTML = [...innerHTML_list].join("");
 			elementlist_div.appendChild(element_div);
@@ -545,6 +550,15 @@ class editorManager {
 		this.render();
 	}
 
+	copyElement(ev) {
+		const element_data = this.ui_elements.filter((x) => x.id === this.selected_element_id)[0];
+		const element_data_copy = JSON.parse(JSON.stringify(element_data));
+		element_data_copy.id += "_2";
+		this.ui_elements.push(element_data_copy);
+		this.selected_element_id = element_data_copy.id;
+		this.render();
+	}
+
 	addUIElement() {
 		let id = `element${this.ui_elements.length + 1}`;
 		while (this.ui_elements.filter((x) => x.id === id).length !== 0) {
@@ -716,3 +730,4 @@ class editorManager {
 		this.dragElement.style.left = x + "px";
 	}
 }
+new editorManager();

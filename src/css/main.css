@@ -2,6 +2,14 @@ a {
 	user-select: none;
 }
 
+p {
+	user-select: none;
+}
+
+img {
+	user-select: none;
+}
+
 .elementlist_dragging {
 	background-color: rgba(255, 68, 55, 0.3);
 }

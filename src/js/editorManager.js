@@ -550,7 +550,7 @@ class editorManager {
 	copyElement(ev) {
 		const element_data = this.ui_elements[this.selected_element_index];
 		const element_data_copy = JSON.parse(JSON.stringify(element_data));
-		element_data_copy.id += "_2";
+		element_data_copy.id = new Date().getTime();
 		this.ui_elements.push(element_data_copy);
 		this.selected_element_index = this.ui_elements.length - 1;
 	}

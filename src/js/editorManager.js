@@ -71,6 +71,7 @@ class editorManager {
 		toolbar_select_input.style.borderColor = this.toolbar_mode === "select" ? "red" : "gray";
 		toolbar_select_input.style.zIndex = 10;
 		toolbar_select_input.id = "toolbar_select_input";
+		toolbar_select_input.alt = "選択モードへ切り替え";
 		toolbar_select_input.onclick = (ev) => {
 			[...ev.target.parentElement.children].map((x) => {
 				if (x.style.borderColor === "red") x.style.borderColor = "gray";
@@ -92,6 +93,7 @@ class editorManager {
 		toolbar_move_input.style.zIndex = 10;
 		toolbar_move_input.style.borderColor = this.toolbar_mode === "move" ? "red" : "gray";
 		toolbar_move_input.id = "toolbar_move_input";
+		toolbar_move_input.alt = "移動モードへ切り替え";
 		toolbar_move_input.onclick = (ev) => {
 			[...ev.target.parentElement.children].map((x) => {
 				if (x.style.borderColor === "red") x.style.borderColor = "gray";
@@ -119,6 +121,7 @@ class editorManager {
 		toolbar_add_input.style.margin = `${this.toolbar_height_px * 0.1}px`;
 		toolbar_add_input.style.border = "1px solid";
 		toolbar_add_input.style.zIndex = 10;
+		toolbar_add_input.alt = "要素追加";
 		toolbar_add_input.id = "toolbar_add_input";
 		toolbar_add_input.onclick = () => this.addUIElement();
 		toolbar_div.appendChild(toolbar_add_input);
@@ -253,7 +256,9 @@ class editorManager {
 			if (this.getElementIndexFromId(element_data.id) === this.selected_element_index) element_div.style.borderColor = "red";
 			const innerHTML_list = [];
 			if (element_data.is_show_image)
-				innerHTML_list.push(`<img style="pointer-events: none;height: 100%;width: 100%;position: absolute;" src="./${element_data.image}">`);
+				innerHTML_list.push(
+					`<img alt="${element_data.image}" style="pointer-events: none;height: 100%;width: 100%;position: absolute;" src="./${element_data.image}">`
+				);
 			if (element_data.is_show_text)
 				innerHTML_list.push(
 					`<a style="text-align:center;line-height:80px;margin:0;pointer-events: none;position: absolute;width: 100%;">${element_data.text}</a>`

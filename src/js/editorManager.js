@@ -669,7 +669,7 @@ class editorManager {
 				this.dragOffset = { x: offsetX, y: offsetY };
 				this.dragElement = target;
 				//パディングを色づける
-				let element_data_index = target.getAttribute("index");
+				let element_data_index = Number(target.getAttribute("index"));
 				document.querySelectorAll(".elementlist_padding").forEach((e) => {
 					const padding_index = Number(e.getAttribute("padding_index"));
 					if (element_data_index === padding_index || element_data_index + 1 === padding_index) return;
@@ -710,8 +710,15 @@ class editorManager {
 				const padding_index = Number(e.getAttribute("padding_index"));
 				const selected_element_data = this.ui_elements[Number(this.dragElement.getAttribute("index"))];
 				const ui_element_index = this.ui_elements.indexOf(selected_element_data);
-				if (ui_element_index < padding_index) this.ui_elements = this.arrayMoveAt(this.ui_elements, ui_element_index, padding_index - 1);
-				else this.ui_elements = this.arrayMoveAt(this.ui_elements, ui_element_index, padding_index);
+				if (ui_element_index < padding_index) {
+					//前から後ろへ
+					this.ui_elements = this.arrayMoveAt(this.ui_elements, ui_element_index, padding_index - 1);
+					this.selected_element_index = padding_index - 1;
+				} else {
+					//後ろから前へ
+					this.ui_elements = this.arrayMoveAt(this.ui_elements, ui_element_index, padding_index);
+					this.selected_element_index = padding_index;
+				}
 			});
 			this.dragElement = undefined;
 			this.render();

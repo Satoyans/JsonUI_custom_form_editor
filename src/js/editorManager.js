@@ -38,7 +38,7 @@ class editorManager {
 		}, 50);
 	}
 	render() {
-		const body = document.getElementsByTagName("body")[0];
+		const body = document.querySelector("#body_div");
 		body.style.margin = 0;
 
 		for (let child of [...body.children]) {

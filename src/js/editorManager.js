@@ -5,23 +5,25 @@ class editorManager {
 		window.addEventListener("resize", () => this.reRenderTimer());
 
 		const check_event_mode = (ev) => {
-			let input_mode;
-			if (ev.type.includes("mouse")) input_mode = "mouse";
-			if (ev.type.includes("touch")) input_mode = "touch";
-			if (this.input_mode === undefined) this.input_mode = input_mode;
-			if (this.input_mode !== input_mode) return;
+			let now_input_mode;
+			if (ev.type.includes("mouse")) now_input_mode = "mouse";
+			if (ev.type.includes("touch")) now_input_mode = "touch";
+			if (this.input_mode === undefined) this.input_mode = now_input_mode;
+
+			if (this.input_mode !== now_input_mode) return;
 			const ev_type = ev.type;
-			console.log(input_mode, ev_type);
 			if (ev_type === "mousemove") this.onMouseMove(ev);
 			if (ev_type === "mousedown") this.onMouseDown(ev);
 			if (ev_type === "mouseup") this.onMouseUp(ev);
+			if (ev_type === "touchstart") this.onTouchStart(ev);
 		};
+
 		document.addEventListener("mousedown", check_event_mode.bind(this), false);
 		document.addEventListener("mouseup", check_event_mode.bind(this), false);
 		document.addEventListener("mousemove", check_event_mode.bind(this), false);
-		document.addEventListener("touchstart", check_event_mode.bind(this), false); //this.onMouseDown.bind(this)
-		document.addEventListener("touchend", check_event_mode.bind(this), false); //this.onMouseUp.bind(this)
-		document.addEventListener("touchmove", check_event_mode.bind(this), false); //this.onMouseMove.bind(this)
+		document.addEventListener("touchstart", check_event_mode.bind(this), false);
+		// document.addEventListener("touchend", check_event_mode.bind(this), false);
+		// document.addEventListener("touchmove", check_event_mode.bind(this), false);
 	}
 
 	setInitConfig() {
@@ -30,6 +32,9 @@ class editorManager {
 		this.dragElement = undefined;
 		this.selected_element_index = undefined;
 		this.input_mode = undefined; //mouse or touch or undefined
+
+		this.operation_past = [];
+		this.operation_future = [];
 
 		this.screen_offset_x = 0;
 		this.screen_offset_y = 0;
@@ -59,7 +64,16 @@ class editorManager {
 			if (this.render_update_time === save) this.render();
 		}, 50);
 	}
-	render() {
+	render(logger = true) {
+		if (logger) {
+			this.operation_past.push({
+				ui_elements: JSON.parse(JSON.stringify(this.ui_elements)),
+				selected_element_index: this.selected_element_index,
+			});
+			this.operation_future = [];
+		}
+		console.log(this.ui_elements);
+
 		//bodyタグのmargin削除
 		document.querySelector("body").style.margin = 0;
 
@@ -168,6 +182,34 @@ class editorManager {
 		toolbar_add_input.onclick = () => this.addUIElement();
 		toolbar_div.appendChild(toolbar_add_input);
 
+		//ツールバー - undo
+		const toolbar_undo_input = document.createElement("input");
+		toolbar_undo_input.type = "image";
+		toolbar_undo_input.src = "./src/img/undo.png";
+		toolbar_undo_input.style.width = `${this.toolbar_height_px * 0.8}px`;
+		toolbar_undo_input.style.height = `${this.toolbar_height_px * 0.8}px`;
+		toolbar_undo_input.style.margin = `${this.toolbar_height_px * 0.1}px`;
+		toolbar_undo_input.style.border = "1px solid";
+		toolbar_undo_input.style.zIndex = 10;
+		toolbar_undo_input.alt = "undo";
+		toolbar_undo_input.id = "toolbar_undo_input";
+		toolbar_undo_input.onclick = () => this.undo();
+		toolbar_div.appendChild(toolbar_undo_input);
+
+		//ツールバー - redo
+		const toolbar_redo_input = document.createElement("input");
+		toolbar_redo_input.type = "image";
+		toolbar_redo_input.src = "./src/img/redo.png";
+		toolbar_redo_input.style.width = `${this.toolbar_height_px * 0.8}px`;
+		toolbar_redo_input.style.height = `${this.toolbar_height_px * 0.8}px`;
+		toolbar_redo_input.style.margin = `${this.toolbar_height_px * 0.1}px`;
+		toolbar_redo_input.style.border = "1px solid";
+		toolbar_redo_input.style.zIndex = 10;
+		toolbar_redo_input.alt = "redo";
+		toolbar_redo_input.id = "toolbar_redo_input";
+		toolbar_redo_input.onclick = () => this.redo();
+		toolbar_div.appendChild(toolbar_redo_input);
+
 		//中央のフレックスDiv
 		const center_flex_div = document.createElement("div");
 		center_flex_div.style.width = "calc(100vw - 5px)";
@@ -195,7 +237,7 @@ class editorManager {
 		controlpanel_div.style.backgroundColor = this.controlpanel_color;
 		controlpanel_div.style.flexGrow = 1;
 		controlpanel_div.style.borderLeft = "1px solid";
-		controlpanel_div.style.width = "30vw";
+		// controlpanel_div.style.width = "30vw";
 		controlpanel_div.id = "controlpanel";
 		center_flex_div.appendChild(controlpanel_div);
 
@@ -228,6 +270,7 @@ class editorManager {
 			`;
 			controlpanel_input_div.querySelector("#controlpanel_delete_button").onclick = (ev) => {
 				this.ui_elements.splice(element_data_index, 1);
+				this.selected_element_index = undefined;
 				this.render();
 			};
 			controlpanel_input_div.querySelector("#controlpanel_update_button").onclick = (ev) => {
@@ -375,6 +418,25 @@ class editorManager {
 
 		//スクロール設定
 		window.scroll({ left: scroll_position_x, top: scroll_position_y });
+	}
+
+	undo() {
+		if (this.operation_past.length <= 1) return;
+		this.operation_future.push(this.operation_past[this.operation_past.length - 1]);
+		this.operation_past.pop();
+		this.ui_elements = this.operation_past[this.operation_past.length - 1].ui_elements;
+		this.selected_element_index = this.operation_past[this.operation_past.length - 1].selected_element_index;
+		this.render(false);
+	}
+
+	redo() {
+		if (this.operation_future.length === 0) return;
+
+		this.operation_past.push(this.operation_future[this.operation_future.length - 1]);
+		this.ui_elements = this.operation_future[this.operation_future.length - 1].ui_elements;
+		this.selected_element_index = this.operation_future[this.operation_future.length - 1].selected_element_index;
+		this.operation_future.pop();
+		this.render(false);
 	}
 
 	load_button_onClick(ev) {
@@ -627,6 +689,23 @@ class editorManager {
 		this.render();
 	}
 
+	arrayMoveAt(array, index, at) {
+		if (index === at || index > array.length - 1 || at > array.length - 1) {
+			return array;
+		}
+
+		const value = array[index];
+		const tail = array.slice(index + 1);
+
+		array.splice(index);
+
+		Array.prototype.push.apply(array, tail);
+
+		array.splice(at, 0, value);
+
+		return array;
+	}
+
 	onMouseDown(ev) {
 		const target = ev.target;
 		if (!target) return;
@@ -708,8 +787,7 @@ class editorManager {
 				if (mouseX < elementX || elementX + e.offsetWidth < mouseX) return;
 				if (mouseY < elementY || elementY + e.offsetHeight < mouseY) return;
 				const padding_index = Number(e.getAttribute("padding_index"));
-				const selected_element_data = this.ui_elements[Number(this.dragElement.getAttribute("index"))];
-				const ui_element_index = this.ui_elements.indexOf(selected_element_data);
+				const ui_element_index = Number(this.dragElement.getAttribute("index"));
 				if (ui_element_index < padding_index) {
 					//前から後ろへ
 					this.ui_elements = this.arrayMoveAt(this.ui_elements, ui_element_index, padding_index - 1);
@@ -723,22 +801,6 @@ class editorManager {
 			this.dragElement = undefined;
 			this.render();
 		}
-	}
-	arrayMoveAt(array, index, at) {
-		if (index === at || index > array.length - 1 || at > array.length - 1) {
-			return array;
-		}
-
-		const value = array[index];
-		const tail = array.slice(index + 1);
-
-		array.splice(index);
-
-		Array.prototype.push.apply(array, tail);
-
-		array.splice(at, 0, value);
-
-		return array;
 	}
 	onMouseMove(ev) {
 		if (!this.dragElement) return;
@@ -772,6 +834,91 @@ class editorManager {
 		this.dragElement.style.position = "absolute";
 		this.dragElement.style.top = y + "px";
 		this.dragElement.style.left = x + "px";
+	}
+
+	onTouchStart(ev) {
+		const target = ev.target;
+		if (!target) return;
+		const classList = [...target.classList.values()];
+
+		//selectモードの時の挙動
+		if (this.toolbar_mode === "select") {
+			//スクリーンをクリックしたとき
+			if (target.id === "screen") {
+				this.selected_element_index = undefined;
+				this.render();
+				return;
+			}
+			//ui_elementをクリックしたとき
+			if (classList.includes("ui_element")) {
+				const target_element_index = Number(target.getAttribute("index"));
+				if (this.selected_element_index !== target_element_index) this.selected_element_index = target_element_index;
+				else this.selected_element_index = undefined;
+				this.render();
+				return;
+			}
+		}
+		//moveモードの時,screenをクリックしたら移動
+		if (this.toolbar_mode === "move" && this.selected_element_index !== undefined && target.id === "screen") {
+			const changedTouch = ev.changedTouches[ev.changedTouches.length - 1];
+			const moveElement = document.querySelector(`div.ui_element[index="${this.selected_element_index}"]`);
+			const element_w = Number(moveElement.style.width.replace("px", ""));
+			const element_h = Number(moveElement.style.height.replace("px", ""));
+
+			let click_x = changedTouch.pageX;
+			let click_y = changedTouch.pageY;
+			const screen_scale = (window.innerWidth * this.screen_width_percent) / 100 / this.screen_width_px;
+			const screen_size_x = this.screen_width_px * screen_scale;
+			const screen_size_y = this.screen_height_px * screen_scale;
+			if (click_x < this.screen_offset_x - element_w / 2) click_x = this.screen_offset_x - element_w / 2;
+			if (this.screen_offset_x + screen_size_x + element_w / 2 < click_x) click_x = this.screen_offset_x + screen_size_x + element_w / 2;
+			if (click_y < this.screen_offset_y - element_h / 2) click_y = this.screen_offset_y - element_h / 2;
+			if (this.screen_offset_y + screen_size_y + element_h / 2 < click_y) click_y = this.screen_offset_y + screen_size_y + element_h / 2;
+
+			// 要素のスタイルと場所を変更
+			moveElement.style.position = "absolute";
+			moveElement.style.top = click_y - element_h / 2 + "px";
+			moveElement.style.left = click_x - element_w / 2 + "px";
+
+			this.ui_elements[this.selected_element_index].x = ((click_x - element_w / 2 - this.screen_offset_x) / screen_scale).toFixed(0);
+			this.ui_elements[this.selected_element_index].y = ((click_y - element_h / 2 - this.screen_offset_y) / screen_scale).toFixed(0);
+			this.render();
+			return;
+		}
+
+		if (classList.includes("elementlist")) {
+			const target_element_index = Number(target.getAttribute("index"));
+			if (this.selected_element_index !== target_element_index) {
+				//選択中のアイテムとそのエレメントが
+				//違うなら選択
+				this.selected_element_index = target_element_index;
+				this.render();
+				return;
+			} else {
+				//一緒ならパディングを色づける
+				document.querySelectorAll(".elementlist_padding").forEach((e) => {
+					const padding_index = Number(e.getAttribute("padding_index"));
+					if (target_element_index === padding_index || target_element_index + 1 === padding_index) return;
+					e.classList.add("elementlist_dragging");
+				});
+				return;
+			}
+		}
+		if (classList.includes("elementlist_dragging")) {
+			const padding_index = Number(target.getAttribute("padding_index"));
+			const ui_element_index = this.selected_element_index;
+			if (ui_element_index < padding_index) {
+				//前から後ろへ
+				this.ui_elements = this.arrayMoveAt(this.ui_elements, ui_element_index, padding_index - 1);
+				this.selected_element_index = padding_index - 1;
+			} else {
+				//後ろから前へ
+				this.ui_elements = this.arrayMoveAt(this.ui_elements, ui_element_index, padding_index);
+				this.selected_element_index = padding_index;
+			}
+			this.render();
+			return;
+		}
 	}
 }
 new editorManager();

@@ -4,9 +4,24 @@ class editorManager {
 		this.render();
 		window.addEventListener("resize", () => this.reRenderTimer());
 
-		document.addEventListener("mousedown", this.onMouseDown.bind(this), false);
-		document.addEventListener("mouseup", this.onMouseUp.bind(this), false);
-		document.addEventListener("mousemove", this.onMouseMove.bind(this), false);
+		const check_event_mode = (ev) => {
+			let input_mode;
+			if (ev.type.includes("mouse")) input_mode = "mouse";
+			if (ev.type.includes("touch")) input_mode = "touch";
+			if (this.input_mode === undefined) this.input_mode = input_mode;
+			if (this.input_mode !== input_mode) return;
+			const ev_type = ev.type;
+			console.log(input_mode, ev_type);
+			if (ev_type === "mousemove") this.onMouseMove(ev);
+			if (ev_type === "mousedown") this.onMouseDown(ev);
+			if (ev_type === "mouseup") this.onMouseUp(ev);
+		};
+		document.addEventListener("mousedown", check_event_mode.bind(this), false);
+		document.addEventListener("mouseup", check_event_mode.bind(this), false);
+		document.addEventListener("mousemove", check_event_mode.bind(this), false);
+		document.addEventListener("touchstart", check_event_mode.bind(this), false); //this.onMouseDown.bind(this)
+		document.addEventListener("touchend", check_event_mode.bind(this), false); //this.onMouseUp.bind(this)
+		document.addEventListener("touchmove", check_event_mode.bind(this), false); //this.onMouseMove.bind(this)
 	}
 
 	setInitConfig() {
@@ -14,6 +29,12 @@ class editorManager {
 		this.dragOffset = { x: undefined, y: undefined };
 		this.dragElement = undefined;
 		this.selected_element_index = undefined;
+		this.input_mode = undefined; //mouse or touch or undefined
+
+		this.screen_offset_x = 0;
+		this.screen_offset_y = 0;
+		this.elementlist_offset_x = 0;
+		this.elementlist_offset_y = 0;
 
 		this.toolbar_mode = "select";
 
@@ -31,6 +52,7 @@ class editorManager {
 		this.elementlist_color = "#a5a8ad";
 	}
 	reRenderTimer() {
+		if (this.input_mode === "touch") return;
 		this.render_update_time = new Date().getTime();
 		let save = this.render_update_time;
 		setTimeout(() => {
@@ -38,16 +60,36 @@ class editorManager {
 		}, 50);
 	}
 	render() {
-		const body = document.querySelector("#body_div");
-		body.style.margin = 0;
+		//bodyタグのmargin削除
+		document.querySelector("body").style.margin = 0;
 
+		const scroll_position_x = window.scrollX;
+		const scroll_position_y = window.scrollY;
+
+		//#body_divの子要素を全て削除
+		const body = document.querySelector("#body_div");
 		for (let child of [...body.children]) {
 			body.removeChild(child);
 		}
 
+		if (this.input_mode !== "touch") {
+			//タッチ以外の操作の変数
+			this.screen_offset_x = 1 + 5; //border + margin
+			this.screen_offset_y = this.toolbar_height_px + 1 * 2 + 5; //ツールバー + border * 2 + margin
+			this.elementlist_offset_x = 1 + 5; //border + margin
+			//elementlist_offset_yはスクリーン追加後に設定する
+		} else {
+			//タッチ操作の時の変数
+			const elementlist_height = Math.floor(this.ui_elements.length / (Math.floor(window.innerWidth / 90) - 2) + 1) * 90;
+			this.screen_offset_x = 1 + 5; //border + margin
+			this.screen_offset_y = this.toolbar_height_px + elementlist_height + 1 * 4 + 5; //ツールバー + エレメントリスト + border * 4 + margin
+			this.elementlist_offset_x = 1 + 5; //border + margin
+			this.elementlist_offset_y = this.toolbar_height_px + 1 * 2; //ツールバー + border * 2
+		}
+
 		//ツールバー
 		const toolbar_div = document.createElement("div");
-		toolbar_div.style.width = "100vw";
+		toolbar_div.style.width = "calc(100vw - 5px)";
 		toolbar_div.style.height = `${this.toolbar_height_px}px`;
 		toolbar_div.style.backgroundColor = this.toolbar_color;
 		toolbar_div.style.border = "1px solid";
@@ -128,7 +170,7 @@ class editorManager {
 
 		//中央のフレックスDiv
 		const center_flex_div = document.createElement("div");
-		center_flex_div.style.width = "100vw";
+		center_flex_div.style.width = "calc(100vw - 5px)";
 		center_flex_div.style.height = "max-content";
 		center_flex_div.style.display = "flex";
 		center_flex_div.style.border = "1px solid";
@@ -153,6 +195,7 @@ class editorManager {
 		controlpanel_div.style.backgroundColor = this.controlpanel_color;
 		controlpanel_div.style.flexGrow = 1;
 		controlpanel_div.style.borderLeft = "1px solid";
+		controlpanel_div.style.width = "30vw";
 		controlpanel_div.id = "controlpanel";
 		center_flex_div.appendChild(controlpanel_div);
 
@@ -212,26 +255,27 @@ class editorManager {
 			controlpanel_div.appendChild(controlpanel_input_div);
 		}
 
+		if (this.input_mode !== "touch") this.elementlist_offset_y = this.toolbar_height_px + 1 * 2 + center_flex_div.offsetHeight; //ツールバー + border * 2 + 中央のdiv
+
 		//エレメントリスト
 		const elementlist_div = document.createElement("div");
 		elementlist_div.style.backgroundColor = this.elementlist_color;
-		elementlist_div.style.width = `100vw`;
+		elementlist_div.style.width = "calc(100vw - 5px)";
 		elementlist_div.style.height = Math.floor(this.ui_elements.length / (Math.floor(window.innerWidth / 90) - 2) + 1) * 90 + "px";
 		elementlist_div.style.border = "1px solid";
 		elementlist_div.id = "elementlist";
-		body.appendChild(elementlist_div);
+		if (this.input_mode !== "touch") body.appendChild(elementlist_div);
+		else body.insertBefore(elementlist_div, center_flex_div);
 
 		//エレメントリストの中身生成
-		const elementlist_offset_x = 1 + 5;
-		const elementlist_offset_y = this.toolbar_height_px + 1 * 2 + center_flex_div.offsetHeight + 5;
 
 		//0番パディング追加
 		const padding_div = document.createElement("div");
 		padding_div.classList.add("elementlist_padding");
 		padding_div.setAttribute("padding_index", 0);
 		padding_div.style.position = "absolute";
-		padding_div.style.top = elementlist_offset_y + "px";
-		padding_div.style.left = elementlist_offset_x + 30 - 10 + "px";
+		padding_div.style.top = this.elementlist_offset_y + "px";
+		padding_div.style.left = this.elementlist_offset_x + 30 - 10 + "px";
 		padding_div.style.width = 10 + "px";
 		padding_div.style.height = 80 + "px";
 		elementlist_div.appendChild(padding_div);
@@ -245,8 +289,8 @@ class editorManager {
 			const grid_index_y = Math.floor(index / max_grid_x);
 
 			element_div.style.position = "absolute";
-			element_div.style.top = grid_index_y * 80 + elementlist_offset_y + "px";
-			element_div.style.left = grid_index_x * 90 + elementlist_offset_x + 30 + "px";
+			element_div.style.top = grid_index_y * 80 + this.elementlist_offset_y + "px";
+			element_div.style.left = grid_index_x * 90 + this.elementlist_offset_x + 30 + "px";
 			element_div.style.width = 80 - 2 + "px";
 			element_div.style.height = 80 - 2 + "px";
 			element_div.style.border = "1px solid";
@@ -273,21 +317,19 @@ class editorManager {
 			padding_div.classList.add("elementlist_padding");
 			padding_div.setAttribute("padding_index", index + 1);
 			padding_div.style.position = "absolute";
-			padding_div.style.top = grid_index_y * 80 + elementlist_offset_y + "px";
-			padding_div.style.left = (grid_index_x + 1) * 90 + elementlist_offset_x + 30 - 10 + "px";
+			padding_div.style.top = grid_index_y * 80 + this.elementlist_offset_y + "px";
+			padding_div.style.left = (grid_index_x + 1) * 90 + this.elementlist_offset_x + 30 - 10 + "px";
 			padding_div.style.width = 10 + "px";
 			padding_div.style.height = 80 + "px";
 			elementlist_div.appendChild(padding_div);
 		}
 
 		//エレメント生成
-		const screen_offset_x = 1 + 5;
-		const screen_offset_y = this.toolbar_height_px + 1 * 2 + 5;
 		for (let element_data of this.ui_elements) {
 			let element_div = document.createElement("div");
 			element_div.style.position = "absolute";
-			element_div.style.top = element_data.y * screen_scale + screen_offset_y + "px";
-			element_div.style.left = element_data.x * screen_scale + screen_offset_x + "px";
+			element_div.style.top = element_data.y * screen_scale + this.screen_offset_y + "px";
+			element_div.style.left = element_data.x * screen_scale + this.screen_offset_x + "px";
 			element_div.style.width = element_data.w * screen_scale - 2 + "px";
 			element_div.style.height = element_data.h * screen_scale - 2 + "px";
 			element_div.style.border = "1px solid";
@@ -320,7 +362,7 @@ class editorManager {
 		const output_textarera = document.createElement("textarea");
 		output_textarera.id = "output";
 		output_textarera.value = JSON.stringify(this.encode(), null, 2);
-		output_textarera.style.width = "100vw";
+		output_textarera.style.width = "calc(100vw - 5px)";
 		let font_size = 12;
 		output_textarera.style.fontSize = font_size + "px";
 		let heigth_line = 0;
@@ -328,7 +370,11 @@ class editorManager {
 		if (heigth_line < font_size * 5) heigth_line = font_size * 5;
 
 		output_textarera.style.height = heigth_line + "px";
+		output_textarera.addEventListener("focus", (ev) => ev.target.select());
 		body.appendChild(output_textarera);
+
+		//スクロール設定
+		window.scroll({ left: scroll_position_x, top: scroll_position_y });
 	}
 
 	load_button_onClick(ev) {
@@ -492,6 +538,7 @@ class editorManager {
 					this.screen_height_px = Math.floor(input.value);
 				}
 			}
+			this.render();
 			return;
 		}
 		const element_data = this.ui_elements[target.getAttribute("index")];
@@ -584,7 +631,6 @@ class editorManager {
 		const target = ev.target;
 		if (!target) return;
 		const classList = [...target.classList.values()];
-
 		if (target.id === "screen" && this.toolbar_mode === "select") {
 			this.selected_element_index = undefined;
 			this.render();
@@ -638,17 +684,15 @@ class editorManager {
 
 		const classList = [...this.dragElement.classList.values()];
 		if (classList.includes("ui_element")) {
-			const screen_offset_x = 1 + 5;
-			const screen_offset_y = this.toolbar_height_px + 1 * 2 + 5;
 			const screen_scale = (window.innerWidth * this.screen_width_percent) / 100 / this.screen_width_px;
 			let element_data = this.ui_elements[Number(this.dragElement.getAttribute("index"))];
 			if (!element_data) return (this.dragElement = undefined);
 			this.ui_elements[this.ui_elements.indexOf(element_data)].x = (
-				(Number(this.dragElement.style.left.replace("px", "")) - screen_offset_x) /
+				(Number(this.dragElement.style.left.replace("px", "")) - this.screen_offset_x) /
 				screen_scale
 			).toFixed(0);
 			this.ui_elements[this.ui_elements.indexOf(element_data)].y = (
-				(Number(this.dragElement.style.top.replace("px", "")) - screen_offset_y) /
+				(Number(this.dragElement.style.top.replace("px", "")) - this.screen_offset_y) /
 				screen_scale
 			).toFixed(0);
 			this.dragElement = undefined;
@@ -690,8 +734,6 @@ class editorManager {
 		return array;
 	}
 	onMouseMove(ev) {
-		//作り直す
-		//this.dragが下にあっても移動できるようにする
 		if (!this.dragElement) return;
 		const classList = [...this.dragElement.classList.values()];
 		let x = ev.pageX - this.dragOffset.x;
@@ -700,28 +742,23 @@ class editorManager {
 		const element_h = Number(this.dragElement.style.height.replace("px", ""));
 
 		if (classList.includes("elementlist")) {
-			const center_flex_div = document.querySelector("#center_flex_div");
-			const elementlist_offset_x = 1 + 5;
-			const elementlist_offset_y = this.toolbar_height_px + 1 * 2 + center_flex_div.offsetHeight + 5;
 			const elementlist_size_x = window.innerWidth;
 			const elementlist_size_y = Math.floor(this.ui_elements.length / (Math.floor(window.innerWidth / 90) - 2) + 1) * 90;
-			if (x < elementlist_offset_x) x = elementlist_offset_x;
-			if (elementlist_offset_x + elementlist_size_x < x + this.dragElement.offsetWidth)
-				x = elementlist_offset_x + elementlist_size_x - this.dragElement.offsetWidth;
-			if (y < elementlist_offset_y) y = elementlist_offset_y;
-			if (elementlist_offset_y + elementlist_size_y < y + this.dragElement.offsetHeight)
-				y = elementlist_offset_y + elementlist_size_y - this.dragElement.offsetHeight;
+			if (x < this.elementlist_offset_x) x = this.elementlist_offset_x;
+			if (this.elementlist_offset_x + elementlist_size_x < x + this.dragElement.offsetWidth)
+				x = this.elementlist_offset_x + elementlist_size_x - this.dragElement.offsetWidth;
+			if (y < this.elementlist_offset_y) y = this.elementlist_offset_y;
+			if (this.elementlist_offset_y + elementlist_size_y < y + this.dragElement.offsetHeight)
+				y = this.elementlist_offset_y + elementlist_size_y - this.dragElement.offsetHeight;
 		}
 		if (classList.includes("ui_element")) {
-			const screen_offset_x = 1 + 5;
-			const screen_offset_y = this.toolbar_height_px + 1 * 2 + 5;
 			const screen_scale = (window.innerWidth * this.screen_width_percent) / 100 / this.screen_width_px;
 			const screen_size_x = this.screen_width_px * screen_scale;
 			const screen_size_y = this.screen_height_px * screen_scale;
-			if (x < screen_offset_x - element_w) x = screen_offset_x - element_w;
-			if (screen_offset_x + screen_size_x < x) x = screen_offset_x + screen_size_x;
-			if (y < screen_offset_y - element_h) y = screen_offset_y - element_h;
-			if (screen_offset_y + screen_size_y < y) y = screen_offset_y + screen_size_y;
+			if (x < this.screen_offset_x - element_w) x = this.screen_offset_x - element_w;
+			if (this.screen_offset_x + screen_size_x < x) x = this.screen_offset_x + screen_size_x;
+			if (y < this.screen_offset_y - element_h) y = this.screen_offset_y - element_h;
+			if (this.screen_offset_y + screen_size_y < y) y = this.screen_offset_y + screen_size_y;
 		}
 
 		// 要素のスタイルと場所を変更

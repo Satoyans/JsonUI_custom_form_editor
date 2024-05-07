@@ -57,11 +57,12 @@ class editorManager {
 		this.elementlist_color = "#a5a8ad";
 	}
 	reRenderTimer() {
+		//サイズ変更
 		if (this.input_mode === "touch") return;
 		this.render_update_time = new Date().getTime();
 		let save = this.render_update_time;
 		setTimeout(() => {
-			if (this.render_update_time === save) this.render();
+			if (this.render_update_time === save) this.render(false);
 		}, 50);
 	}
 	render(logger = true) {
@@ -72,7 +73,6 @@ class editorManager {
 			});
 			this.operation_future = [];
 		}
-		console.log(this.ui_elements);
 
 		//bodyタグのmargin削除
 		document.querySelector("body").style.margin = 0;
@@ -210,6 +210,21 @@ class editorManager {
 		toolbar_redo_input.onclick = () => this.redo();
 		toolbar_div.appendChild(toolbar_redo_input);
 
+		//ツールバー - github
+		const toolbar_github_input = document.createElement("input");
+		toolbar_github_input.type = "image";
+		toolbar_github_input.src = "./src/img/github-mark.png";
+		toolbar_github_input.style.width = `${this.toolbar_height_px * 0.8}px`;
+		toolbar_github_input.style.height = `${this.toolbar_height_px * 0.8}px`;
+		toolbar_github_input.style.margin = `${this.toolbar_height_px * 0.1}px`;
+		toolbar_github_input.style.border = "1px solid";
+		toolbar_github_input.style.zIndex = 10;
+		toolbar_github_input.style.marginLeft = "auto";
+		toolbar_github_input.alt = "github-link";
+		toolbar_github_input.id = "toolbar_github_input";
+		toolbar_github_input.onclick = () => window.open("https://github.com/Satoyans/JsonUI_custom_form_editor");
+		toolbar_div.appendChild(toolbar_github_input);
+
 		//中央のフレックスDiv
 		const center_flex_div = document.createElement("div");
 		center_flex_div.style.width = "calc(100vw - 5px)";
@@ -222,7 +237,7 @@ class editorManager {
 		body.appendChild(center_flex_div);
 
 		//スクリーン
-		const screen_scale = (window.innerWidth * this.screen_width_percent) / 100 / this.screen_width_px;
+		const screen_scale = ((window.innerWidth * this.screen_width_percent) / 100 / this.screen_width_px).toFixed(2);
 
 		const screen_div = document.createElement("div");
 		screen_div.style.width = `${this.screen_width_px * screen_scale}px`;
@@ -237,8 +252,9 @@ class editorManager {
 		controlpanel_div.style.backgroundColor = this.controlpanel_color;
 		controlpanel_div.style.flexGrow = 1;
 		controlpanel_div.style.borderLeft = "1px solid";
-		// controlpanel_div.style.width = "30vw";
+		controlpanel_div.style.marginLeft = "auto";
 		controlpanel_div.id = "controlpanel";
+		controlpanel_div.style.width = `${((this.screen_width_px * screen_scale) / 0.8) * 0.2}px`;
 		center_flex_div.appendChild(controlpanel_div);
 
 		const controlpanel_title_h2 = document.createElement("h2");
@@ -275,11 +291,9 @@ class editorManager {
 			};
 			controlpanel_input_div.querySelector("#controlpanel_update_button").onclick = (ev) => {
 				this.updateElement(ev);
-				this.render();
 			};
 			controlpanel_input_div.querySelector("#controlpanel_copy_button").onclick = (ev) => {
 				this.copyElement(ev);
-				this.render();
 			};
 			controlpanel_div.appendChild(controlpanel_input_div);
 		} else {
@@ -584,75 +598,98 @@ class editorManager {
 
 	updateElement(ev) {
 		const target = ev.target;
+
 		if (target.getAttribute("index") === "screen") {
+			let update_flag = false;
 			const inputs = [...target.parentElement.querySelectorAll("input")];
 			for (let input of inputs) {
 				if (input.id === "size_x") {
-					if (input.value === this.screen_width_px) continue;
-					if (Number.isNaN(Number(input.value))) return window.alert("size_xの値が数値ではありません");
-					if (Number(input.value) % 1 !== 0) return window.alert("size_xの値が整数値ではありません");
-					this.screen_width_px = Math.floor(input.value);
+					const num_value = Number(input.value);
+					if (num_value === this.screen_width_px) continue;
+					if (Number.isNaN(num_value)) return window.alert("size_xの値が数値ではありません");
+					if (num_value % 1 !== 0) return window.alert("size_xの値が整数値ではありません");
+					this.screen_width_px = Math.floor(num_value);
+					update_flag = true;
 				}
 				if (input.id === "size_y") {
-					if (input.value === this.screen_height_px) continue;
-					if (Number.isNaN(Number(input.value))) return window.alert("size_yの値が数値ではありません");
-					if (Number(input.value) % 1 !== 0) return window.alert("size_yの値が整数値ではありません");
-					this.screen_height_px = Math.floor(input.value);
+					const num_value = Number(input.value);
+					if (num_value === this.screen_height_px) continue;
+					if (Number.isNaN(num_value)) return window.alert("size_yの値が数値ではありません");
+					if (num_value % 1 !== 0) return window.alert("size_yの値が整数値ではありません");
+					this.screen_height_px = Math.floor(num_value);
+					update_flag = true;
 				}
 			}
-			this.render();
+			if (update_flag) this.render();
 			return;
 		}
-		const element_data = this.ui_elements[target.getAttribute("index")];
+
+		//スクリーン以外の時
+		const element_data = this.ui_elements[Number(target.getAttribute("index"))];
 		const inputs = [...target.parentElement.querySelectorAll("input")];
+		let update_flag = false;
 		for (let input of inputs) {
 			if (input.id === "size_w") {
-				if (input.value === element_data.w) continue;
-				if (Number.isNaN(Number(input.value))) return window.alert("size_wの値が数値ではありません");
-				if (Number(input.value) % 1 !== 0) return window.alert("size_wの値が整数値ではありません");
-				element_data.w = Math.floor(input.value);
+				const num_value = Number(input.value);
+				if (num_value === element_data.w) continue;
+				if (Number.isNaN(num_value)) return window.alert("size_wの値が数値ではありません");
+				if (num_value % 1 !== 0) return window.alert("size_wの値が整数値ではありません");
+				element_data.w = Math.floor(num_value);
+				update_flag = true;
 			}
 			if (input.id === "size_h") {
-				if (input.value === element_data.h) continue;
-				if (Number.isNaN(Number(input.value))) return window.alert("size_hの値が数値ではありません");
-				if (Number(input.value) % 1 !== 0) return window.alert("size_hの値が整数値ではありません");
-				element_data.h = Math.floor(input.value);
+				const num_value = Number(input.value);
+				if (num_value === element_data.h) continue;
+				if (Number.isNaN(num_value)) return window.alert("size_hの値が数値ではありません");
+				if (num_value % 1 !== 0) return window.alert("size_hの値が整数値ではありません");
+				element_data.h = Math.floor(num_value);
+				update_flag = true;
 			}
 			if (input.id === "offset_x") {
-				if (input.value === element_data.x) continue;
-				if (Number.isNaN(Number(input.value))) return window.alert("offset_xの値が数値ではありません");
-				if (Number(input.value) % 1 !== 0) return window.alert("offset_xの値が整数値ではありません");
-				element_data.x = Math.floor(input.value);
+				const num_value = Number(input.value);
+				if (num_value === element_data.x) continue;
+				if (Number.isNaN(num_value)) return window.alert("offset_xの値が数値ではありません");
+				if (num_value % 1 !== 0) return window.alert("offset_xの値が整数値ではありません");
+				element_data.x = Math.floor(num_value);
+				update_flag = true;
 			}
 			if (input.id === "offset_y") {
-				if (input.value === element_data.y) continue;
-				if (Number.isNaN(Number(input.value))) return window.alert("offset_yの値が数値ではありません");
-				if (Number(input.value) % 1 !== 0) return window.alert("offset_yの値が整数値ではありません");
-				element_data.y = Math.floor(input.value);
+				const num_value = Number(input.value);
+				if (num_value === element_data.y) continue;
+				if (Number.isNaN(num_value)) return window.alert("offset_yの値が数値ではありません");
+				if (num_value % 1 !== 0) return window.alert("offset_yの値が整数値ではありません");
+				element_data.y = Math.floor(num_value);
+				update_flag = true;
 			}
 			if (input.id === "text") {
-				if (input.value === element_data.id) continue;
+				if (input.value === element_data.text) continue;
 				element_data.text = input.value;
+				update_flag = true;
 			}
 			if (input.id === "image_path") {
-				if (input.value === element_data.id) continue;
+				if (input.value === element_data.image) continue;
 				element_data.image = input.value;
+				update_flag = true;
 			}
 
 			if (input.id === "is_show_text") {
 				if (input.checked === element_data.is_show_text) continue;
 				element_data.is_show_text = input.checked;
+				update_flag = true;
 			}
 			if (input.id === "is_show_image") {
 				if (input.checked === element_data.is_show_image) continue;
 				element_data.is_show_image = input.checked;
+				update_flag = true;
 			}
 			if (input.id === "is_show_button") {
 				if (input.checked === element_data.is_show_button) continue;
 				element_data.is_show_button = input.checked;
+				update_flag = true;
 			}
 		}
-		this.render();
+		if (update_flag) this.render();
+		return;
 	}
 
 	getElementIndexFromId(id) {
@@ -667,6 +704,7 @@ class editorManager {
 		element_data_copy.id = new Date().getTime();
 		this.ui_elements.push(element_data_copy);
 		this.selected_element_index = this.ui_elements.length - 1;
+		this.render();
 	}
 
 	addUIElement() {
@@ -711,6 +749,7 @@ class editorManager {
 		if (!target) return;
 		const classList = [...target.classList.values()];
 		if (target.id === "screen" && this.toolbar_mode === "select") {
+			if (this.selected_element_index === undefined) return;
 			this.selected_element_index = undefined;
 			this.render();
 			return;
@@ -766,14 +805,12 @@ class editorManager {
 			const screen_scale = (window.innerWidth * this.screen_width_percent) / 100 / this.screen_width_px;
 			let element_data = this.ui_elements[Number(this.dragElement.getAttribute("index"))];
 			if (!element_data) return (this.dragElement = undefined);
-			this.ui_elements[this.ui_elements.indexOf(element_data)].x = (
-				(Number(this.dragElement.style.left.replace("px", "")) - this.screen_offset_x) /
-				screen_scale
-			).toFixed(0);
-			this.ui_elements[this.ui_elements.indexOf(element_data)].y = (
-				(Number(this.dragElement.style.top.replace("px", "")) - this.screen_offset_y) /
-				screen_scale
-			).toFixed(0);
+			this.ui_elements[this.ui_elements.indexOf(element_data)].x = Number(
+				((Number(this.dragElement.style.left.replace("px", "")) - this.screen_offset_x) / screen_scale).toFixed(0)
+			);
+			this.ui_elements[this.ui_elements.indexOf(element_data)].y = Number(
+				((Number(this.dragElement.style.top.replace("px", "")) - this.screen_offset_y) / screen_scale).toFixed(0)
+			);
 			this.dragElement = undefined;
 			this.render();
 		}
@@ -845,6 +882,7 @@ class editorManager {
 		if (this.toolbar_mode === "select") {
 			//スクリーンをクリックしたとき
 			if (target.id === "screen") {
+				if (this.selected_element_index === undefined) return;
 				this.selected_element_index = undefined;
 				this.render();
 				return;
